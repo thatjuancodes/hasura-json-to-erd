@@ -1,4 +1,5 @@
 import json
+import sys
 
 def extract_tables_from_schema(schema_file):
     with open(schema_file, 'r') as f:
@@ -62,6 +63,18 @@ def generate_mermaid_erd(tables, relationships):
     
     return "\n".join(erd)
 
+def generate_mermaid_erd_tables_only(tables, relationships):
+    erd = ["erDiagram"]
+    
+    # Add tables and their columns
+    for table in tables:
+        erd.append(f"    {table['name']} {{")
+        for column in table['columns']:
+            erd.append(f"        string {column}")
+        erd.append("    }")
+    
+    return "\n".join(erd)
+
 def main():
     schema_file = './schema.json'  # Replace with the path to your schema.json file
     output_file = './erd_diagram.md'  # Replace with the desired output file path
@@ -73,7 +86,12 @@ def main():
     tables = extract_tables_from_schema(schema_file)
     # Extract relationships
     relationships = extract_relationships(schema)
-    erd = generate_mermaid_erd(tables, relationships)
+
+    # Check for the --tables-only flag
+    if '--tables-only' in sys.argv:
+        erd = generate_mermaid_erd_tables_only(tables, relationships)
+    else:
+        erd = generate_mermaid_erd(tables, relationships)
     
     with open(output_file, 'w') as f:
         f.write(erd)
