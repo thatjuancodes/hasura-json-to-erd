@@ -1,28 +1,24 @@
 import json
 import sys
 
-def extract_tables_from_schema(schema_file):
-    with open(schema_file, 'r') as f:
-        schema = json.load(f)
-    
-    # Check if the schema is nested under 'data' or directly under '__schema'
-    if '__schema' in schema:
-        schema_data = schema['__schema']
-    elif 'data' in schema and '__schema' in schema['data']:
-        schema_data = schema['data']['__schema']
-    else:
-        raise KeyError("The schema does not contain a '__schema' key.")
-    
-    tables = []
+def extract_tables_from_schema(schema):
+    tables = {}
 
-    for type_data in schema_data['types']:
-        # Exclude system-generated types and specific keywords
-        if (type_data['kind'] == 'OBJECT' and 
-            not type_data['name'].startswith(('query_root', 'mutation_root', 'subscription_root', 'hasura_', '_')) and
-            not any(keyword in type_data['name'] for keyword in ['mutation', 'max', 'min', 'aggregate', 'stddev', 'sum', 'var', 'avg'])):
-            columns = [field['name'] for field in type_data['fields']]
-            tables.append({'name': type_data['name'], 'columns': columns})
-    
+    # Iterate over the types in the schema
+    for type_def in schema.get('__schema', {}).get('types', []):
+        type_description = type_def.get('description', '')
+        if isinstance(type_description, str) and type_description.startswith('columns and relationships of'):
+            table_name = type_def['name']
+            columns = []
+            
+            for field in type_def.get('fields', []):
+                if field.get('description') is None:
+                    field_name = field['name']
+                    field_type = field['type'].get('name') or field['type'].get('ofType', {}).get('name')
+                    columns.append({'name': field_name, 'type': field_type})
+            
+            tables[table_name] = columns
+
     return tables
 
 def extract_relationships(schema):
@@ -49,12 +45,12 @@ def extract_relationships(schema):
 def generate_mermaid_erd(tables, relationships):
     erd = ["erDiagram"]
     
-    # Add tables and their columns
-    for table in tables:
-        erd.append(f"    {table['name']} {{")
-        for column in table['columns']:
-            erd.append(f"        string {column}")
-        erd.append("    }")
+    # Add tables and their columns in Mermaid syntax
+    for table, fields in tables.items():
+        erd.append(f"class {table} {{")
+        for field in fields:
+            erd.append(f"  {field['type']} {field['name']}")
+        erd.append("}")
 
     # Add relationships
     for table, rels in relationships.items():
@@ -63,15 +59,15 @@ def generate_mermaid_erd(tables, relationships):
     
     return "\n".join(erd)
 
-def generate_mermaid_erd_tables_only(tables, relationships):
+def generate_mermaid_erd_tables_only(tables):
     erd = ["erDiagram"]
     
-    # Add tables and their columns
-    for table in tables:
-        erd.append(f"    {table['name']} {{")
-        for column in table['columns']:
-            erd.append(f"        string {column}")
-        erd.append("    }")
+    # Add tables and their columns in Mermaid syntax
+    for table, fields in tables.items():
+        erd.append(f"class {table} {{")
+        for field in fields:
+            erd.append(f"  {field['type']} {field['name']}")
+        erd.append("}")
     
     return "\n".join(erd)
 
@@ -83,13 +79,13 @@ def main():
     with open(schema_file, 'r') as file:
         schema = json.load(file)
     
-    tables = extract_tables_from_schema(schema_file)
+    tables = extract_tables_from_schema(schema)
     # Extract relationships
     relationships = extract_relationships(schema)
 
     # Check for the --tables-only flag
     if '--tables-only' in sys.argv:
-        erd = generate_mermaid_erd_tables_only(tables, relationships)
+        erd = generate_mermaid_erd_tables_only(tables)
     else:
         erd = generate_mermaid_erd(tables, relationships)
     
