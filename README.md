@@ -4,8 +4,13 @@ This is a collection of python scripts for converting hasura graphql schema.json
 
 ## Table of Contents
 
+- [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Usage](#usage)
+
+## Dependencies
+
+I'm using 3.9.7 as I'm developing this. I'm guessing any python version that works well with graphviz
 
 ## Installation
 
@@ -20,6 +25,7 @@ cd hasura-json-to-erd
 
 # Install dependencies
 pip install graphviz
+```
 
 ## Usage
 
@@ -28,12 +34,18 @@ pip install graphviz
 3. Run the commands:
 
 - For converting to an image
-`python setup.py schema.json`
+```sh
+python setup.py schema.json
+```
 
 - For showing the tables on the command line
+```sh
 `python extract_tables.py`
+```
 
 - For converting to mermaid markdown format
+```sh
 `python convert_to_mermaid_syntax.py schema.json`
+```
 
-Note: for mermaid format, you can go to this playround and paste the results from the generated .md file and it will show the diagram for you
+Note: for mermaid format, you can go to [this playground site](https://mermaid.live/edit) and paste the results from the generated .md file and it will show the diagram for you
