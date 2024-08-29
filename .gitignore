@@ -2,5 +2,7 @@
 pygraphviz/
 pygraphviz/*
 
+# generated files
 schema.json
 schema_diagram.png
+erd_diagram.md
