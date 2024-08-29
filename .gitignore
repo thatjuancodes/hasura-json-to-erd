@@ -1,3 +1,6 @@
 .DS_Store
 pygraphviz/
 pygraphviz/*
+
+schema.json
+schema_diagram.png
