@@ -18,7 +18,7 @@ def extract_tables_from_schema(schema_file):
         # Exclude system-generated types and specific keywords
         if (type_data['kind'] == 'OBJECT' and 
             not type_data['name'].startswith(('query_root', 'mutation_root', 'subscription_root', 'hasura_', '_')) and
-            not any(keyword in type_data['name'] for keyword in ['mutation', 'max', 'min', 'aggregate', 'stddev', 'sum', 'var'])):
+            not any(keyword in type_data['name'] for keyword in ['mutation', 'max', 'min', 'aggregate', 'stddev', 'sum', 'var', 'avg'])):
             columns = [field['name'] for field in type_data['fields']]
             tables.append({'name': type_data['name'], 'columns': columns})
     
