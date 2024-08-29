@@ -1,48 +1,49 @@
 import json
 
-def extract_relationships_from_schema(schema_file):
-    with open(schema_file, 'r') as f:
-        schema = json.load(f)
+def extract_relationships(schema):
+    relationships = {}
     
-    # Check if the schema is nested under 'data' or directly under '__schema'
-    if '__schema' in schema:
-        schema_data = schema['__schema']
-    elif 'data' in schema and '__schema' in schema['data']:
-        schema_data = schema['data']['__schema']
-    else:
-        raise KeyError("The schema does not contain a '__schema' key.")
-    
-    relationships = []
-
-    for type_data in schema_data['types']:
-        # Exclude system-generated types and specific keywords
-        if (type_data['kind'] == 'OBJECT' and 
-            not type_data['name'].startswith(('query_root', 'mutation_root', 'subscription_root', 'hasura_', '_')) and
-            not any(keyword in type_data['name'] for keyword in ['mutation', 'max', 'min', 'aggregate', 'stddev', 'sum', 'var'])):
+    # Iterate over the types in the schema
+    for type_def in schema.get('__schema', {}).get('types', []):
+        type_description = type_def.get('description', '')
+        if isinstance(type_description, str) and type_description.startswith('columns and relationships of'):
+            table_name = type_def['name']
+            table_relationships = []
             
-            for field in type_data['fields']:
-                field_type = None
-                if field['type'] is not None:
-                    if field['type']['kind'] == 'OBJECT':
-                        field_type = field['type']['name']
-                    elif field['type']['ofType'] is not None:
-                        field_type = field['type']['ofType']['name']
-                
-                if field_type and field_type != type_data['name']:
-                    relationships.append({
-                        'from': type_data['name'],
-                        'to': field_type,
-                        'field': field['name']
-                    })
+            for field in type_def.get('fields', []):
+                if field.get('description') in ['An object relationship', 'An array relationship', 'An aggregate relationship']:
+                    relationship_name = field['name']
+                    related_table = field['type'].get('name') or field['type'].get('ofType', {}).get('name')
+                    table_relationships.append((relationship_name, related_table))
+            
+            if table_relationships:
+                relationships[table_name] = table_relationships
     
     return relationships
 
 def main():
     schema_file = './schema.json'  # Replace with the path to your schema.json file
-    relationships = extract_relationships_from_schema(schema_file)
     
-    for relationship in relationships:
-        print(f"{relationship['from']} -> {relationship['to']} : {relationship['field']}")
+    # Load the schema.json file
+    with open(schema_file, 'r') as file:
+        schema = json.load(file)
+    
+    # Extract relationships
+    relationships = extract_relationships(schema)
+    
+    # Display the relationships
+    for table, rels in relationships.items():
+        print(f"Table: {table}")
+        for rel in rels:
+            print(f"  Relationship: {rel[0]}, Related Table: {rel[1]}")
 
-if __name__ == '__main__':
+    # Display total tables
+    total_tables = len(relationships)
+    print(f"Total tables with relationships: \033[92m{total_tables}\033[0m")
+
+    # Display total count of relationships
+    total_relationships = sum(len(rels) for rels in relationships.values())
+    print(f"Total relationships extracted: \033[92m{total_relationships}\033[0m")
+
+if __name__ == "__main__":
     main()
