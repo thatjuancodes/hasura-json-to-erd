@@ -15,7 +15,33 @@ def extract_tables_from_schema(schema):
     
     return tables
 
-def generate_diagram(tables, output_file='schema_diagram'):
+def extract_relationships_from_schema(schema):
+    relationships = []
+
+    for type_data in schema['types']:
+        # Exclude system-generated types and specific keywords
+        if (type_data['kind'] == 'OBJECT' and 
+            not type_data['name'].startswith(('query_root', 'mutation_root', 'subscription_root', 'hasura_', '_')) and
+            not any(keyword in type_data['name'] for keyword in ['mutation', 'max', 'min', 'aggregate', 'stddev', 'sum', 'var'])):
+            
+            for field in type_data['fields']:
+                field_type = None
+                if field['type'] is not None:
+                    if field['type']['kind'] == 'OBJECT':
+                        field_type = field['type']['name']
+                    elif field['type']['ofType'] is not None:
+                        field_type = field['type']['ofType']['name']
+                
+                if field_type and field_type != type_data['name']:
+                    relationships.append({
+                        'from': type_data['name'],
+                        'to': field_type,
+                        'field': field['name']
+                    })
+    
+    return relationships
+
+def generate_diagram(tables, relationships, output_file='schema_diagram'):
     dot = Digraph(comment='Database Schema')
 
     # Group tables into rows of 3
@@ -26,6 +52,10 @@ def generate_diagram(tables, output_file='schema_diagram'):
                 print(f"Processing table: {table['name']}")
                 table_label = f"{table['name']}|{{" + "|".join(table['columns']) + "}}"
                 s.node(table['name'], label=table_label, shape='record')
+
+    # Add relationships to the diagram
+    # for relationship in relationships:
+    #     dot.edge(relationship['from'], relationship['to'], label=relationship['field'])
 
     dot.render(output_file, format='png', cleanup=True)
     print(f"Diagram saved as {output_file}.png")
@@ -48,7 +78,8 @@ def main():
         raise KeyError("The schema does not contain a '__schema' key.")
     
     tables = extract_tables_from_schema(schema_data)
-    generate_diagram(tables)
+    relationships = extract_relationships_from_schema(schema_data)
+    generate_diagram(tables, relationships)
 
 if __name__ == '__main__':
     main()
